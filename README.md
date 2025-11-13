@@ -1,5 +1,9 @@
-# -RISCV-processor
+# RISCV-processor
 a simulator for a simplified RISC-V processor in C++
+## Milestone#1
+  - Implemented parsing of RISC-V source code
+  - Implemented conversion of RISC-V code to equivalent opcodes (hex)
+  - Printed output in console
 
 ## To run:
 g++ *.cpp -o main.exe
