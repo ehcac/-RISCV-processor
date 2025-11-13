@@ -16,18 +16,19 @@ int main() {
     SYMBOL_TABLE = buildSymbolTable(lines);
     vector<ParsedInstruction> instructions = parseInstructions(lines);
 
-    cout << "\nOpcode Translation" << endl;
+    cout << "\n--- Opcode Translation ---" << endl;
     INSTRUCTION_MEMORY = translateToOpcode(instructions);
 
     cout << "Address\t\tOpcode (Hex)\tInstruction" << endl;
     cout << "------------------------------------------------" << endl;
     for (const ParsedInstruction& inst : instructions) {
         unsigned int opcode = INSTRUCTION_MEMORY.at(inst.address);
-        cout << "0x" << hex << uppercase << setw(8) << inst.address
-             << "\t0x" << setw(8) << opcode
-             << "\t" << inst.originalLine << endl;
+        cout << "0x" << setw(8) << setfill('0') << hex << uppercase << inst.address
+         << "\t0x" << setw(8) << setfill('0') << hex << uppercase << opcode
+         << "\t" << inst.originalLine
+         << endl;
+
     }
 
     return 0;
 }
-
