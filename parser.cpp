@@ -22,7 +22,7 @@ vector<string> readAndPreprocess(const string& filename) {
         line.erase(line.find_last_not_of(" \t\r\n") + 1);
 
         if (!line.empty()) {
-            // ignore assembler directives
+            // ignore .word and stuff
             if (line[0] == '.') {
                 continue; 
             }
@@ -221,4 +221,5 @@ bool validateInstructions(const vector<ParsedInstruction>& instructions) {
         }
     }
     return success;
+
 }
