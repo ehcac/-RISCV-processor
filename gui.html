@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RISC-V Simulator</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="simulator.js"></script>
+    <script>
+    SimModule().then(Module => {
+        window.Module = Module;
+
+        function updateRegisters() {
+            const regs = Module.getRegisters();
+            document.getElementById("regs").textContent = regs.join("\n");
+        }
+
+        window.step = () => { Module.step(); updateRegisters(); };
+        window.run = () => { Module.run(10); updateRegisters(); };
+
+        updateRegisters();
+    });
+</script>
+</head>
+<body>
+  <h1>RISC-V Simulator</h1>
+  <input type="text" placeholder="Enter name of file:">
+  <button onclick="run()">Run</button>
+  
+  <table border="1" cellpadding="1">
+  <tr>
+    <th>Address</th>
+    <th>Opcode (Hex)</th>
+    <th>Instruction</th>
+  </tr>
+
+  <!-- add more rows -->
+</table>
+<p>js stuff</p>
+
+
+  <h2>Registers</h2>
+  <pre id="registers">registers here</pre>
+
+</body>
+</html>
