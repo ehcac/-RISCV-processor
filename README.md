@@ -12,6 +12,10 @@ g++ *.cpp -o main.exe
 LW, SW, SLT, SLL, SLLI, BEQ, BLT
 additional instructions: ADD, SUB, AND, ADDI
 
+## Milestone#2
+  - used webassembly with html and css and js
+  - compiled with "emcc utils.cpp parser.cpp encoder.cpp instruction_set.cpp -o simulator.js --bind -O3" to produce js and wasm file
+
 ## Project Structure:
 - assembler.hpp - contains shared data structures, constants, and global declarations
 - instruction_set.cpp - contains the RISC-V instruction definitions
