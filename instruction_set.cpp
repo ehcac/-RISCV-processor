@@ -9,10 +9,10 @@ map<string, InstructionInfo> INSTRUCTION_SET = {
     {"lw",   {"I", "0000011", "010"}},
 
     {"sw",   {"S", "0100011", "010"}},
+    
     {"beq",  {"B", "1100011", "000"}},
     {"blt",  {"B", "1100011", "100"}},
 };
 
 map<unsigned int, unsigned int> INSTRUCTION_MEMORY;
 map<string, unsigned int> SYMBOL_TABLE;
-

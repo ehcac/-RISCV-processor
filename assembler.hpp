@@ -14,7 +14,7 @@
 using namespace std;
 
 const unsigned int INSTRUCTION_MEMORY_START = 0x80;
-const unsigned int DATA_MEMORY_SIZE = 0x80;
+const unsigned int DATA_MEMORY_START = 0x00; // Data starts at 0
 
 struct InstructionInfo {
     string type, op, f3, f7;
@@ -33,5 +33,6 @@ struct ParsedInstruction {
 extern map<string, InstructionInfo> INSTRUCTION_SET;
 extern map<unsigned int, unsigned int> INSTRUCTION_MEMORY;
 extern map<string, unsigned int> SYMBOL_TABLE;
+extern map<unsigned int, int32_t> DATA_SEGMENT; 
 
 #endif
