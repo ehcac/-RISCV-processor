@@ -78,7 +78,6 @@ map<string, unsigned int> buildSymbolTable(const vector<string>& lines) {
 /**
  * Pass 2: Parses instructions and prepares them for encoding.
  * The logic extracts mnemonic and operands, handling the special S/I-Type format 
- * (e.g., lw rd, imm(rs1)) and J-Type alias (j label).
  */
 vector<ParsedInstruction> parseInstructions(const vector<string>& lines) {
     vector<ParsedInstruction> instructions;
@@ -151,3 +150,4 @@ vector<ParsedInstruction> parseInstructions(const vector<string>& lines) {
 
     return instructions;
 }
+
