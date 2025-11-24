@@ -101,13 +101,18 @@
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
-        button:hover {
+        button:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
-        button:active {
+        button:active:not(:disabled) {
             transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .btn-primary {
@@ -157,6 +162,12 @@
             border: 1px solid #bee5eb;
         }
 
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
         .register-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -179,25 +190,58 @@
             color: #3498db;
         }
 
-        .pipeline-stage {
-            background: white;
-            border: 2px solid #3498db;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 12px;
+        #pipelineDisplay {
+            margin-top: 10px;
+            padding: 10px;
         }
 
+       .pipeline-map {
+        display: grid;
+        grid-auto-flow: column; /* columns = cycles */
+        grid-template-rows: repeat(5, auto); /* 5 pipeline stages */
+        gap: 2px;
+        overflow-x: auto;
+        padding: 5px;
+        border: 1px solid #3498db;
+    }
+
+    .pipeline-map .stage-cell {
+        border: 1px solid #3498db;
+        padding: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        text-align: center;
+        min-width: 80px;
+    }
+
+    .pipeline-map .header-cell {
+        font-weight: bold;
+        background: #3498db;
+        color: white;
+    }
+
+
+        .pipeline-stage {
+            flex: 1;
+            padding: 0 10px;
+            border-left: 1px solid #ddd;
+        }
+        .pipeline-stage:first-child { border-left: none; }
+
         .pipeline-stage h3 {
-            color: #3498db;
-            font-size: 16px;
-            margin-bottom: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
         }
 
         .pipeline-stage p {
             font-family: 'Courier New', monospace;
-            font-size: 12px;
-            margin: 4px 0;
-            color: #555;
+            font-size: 13px;
+            margin: 5px 0;
+            word-wrap: break-word;
         }
 
         .memory-controls {
@@ -247,6 +291,22 @@
             grid-column: 1 / -1;
         }
 
+        .loading-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         @media (max-width: 1200px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -280,19 +340,21 @@ sll x4, x1, x2
 end:
 sw x3, 8(x0)"></textarea>
                 <div class="controls">
-                    <button class="btn-primary" onclick="initSim()">🚀 Initialize Simulator</button>
-                    <button class="btn-warning" onclick="resetSim()">🔄 Reset</button>
+                    <button class="btn-primary" onclick="initSim()" id="initBtn">Initialize Simulator</button>
+                    <button class="btn-warning" onclick="resetSim()" id="resetBtn">Reset</button>
                 </div>
-                <div id="statusBox" class="status-box status-info">Ready to load assembly code...</div>
+                <div id="statusBox" class="status-box status-warning">
+                    <span class="loading-spinner"></span>Loading WebAssembly module...
+                </div>
             </div>
 
             <!-- Simulation Controls & PC -->
             <div class="panel">
                 <h2>Simulation Controls</h2>
-                <div class="pc-display">PC: <span id="pcValue">0x00000000</span></div>
+                <div class="pc-display">NPC: <span id="pcValue">0x00000000</span></div>
                 <div class="controls">
-                    <button class="btn-success" onclick="stepSim()">➡️ Step (1 Cycle)</button>
-                    <button class="btn-success" onclick="runSim()">▶️ Run All</button>
+                    <button class="btn-success" onclick="stepSim()" id="stepBtn" disabled>Step (1 Cycle)</button>
+                    <button class="btn-success" onclick="runAllWithPipeline()" id="runBtn" disabled>Run All</button>
                 </div>
                 
                 <h2 style="margin-top: 20px;">Register Editor</h2>
@@ -301,7 +363,7 @@ sw x3, 8(x0)"></textarea>
                     <input type="number" id="regValue" placeholder="Value">
                 </div>
                 <div class="controls">
-                    <button class="btn-primary" onclick="setReg()">Set Register</button>
+                    <button class="btn-primary" onclick="setReg()" id="setRegBtn" disabled>Set Register</button>
                 </div>
 
                 <h2 style="margin-top: 20px;">Memory Editor</h2>
@@ -310,22 +372,26 @@ sw x3, 8(x0)"></textarea>
                     <input type="number" id="memValue" placeholder="Value (32-bit)">
                 </div>
                 <div class="controls">
-                    <button class="btn-primary" onclick="setMem()">Set Memory Word</button>
-                    <button class="btn-warning" onclick="getMem()">View Memory</button>
+                    <button class="btn-primary" onclick="setMem()" id="setMemBtn" disabled>Set Memory Word</button>
+                    <button class="btn-warning" onclick="getMem()" id="getMemBtn" disabled>View Memory</button>
                 </div>
                 <div id="memoryView" class="status-box status-info" style="margin-top: 10px; display: none;"></div>
             </div>
 
-            <!-- Pipeline State -->
+            <!-- Pipeline State (Live / Gantt Chart) -->
             <div class="panel full-width">
                 <h2>Pipeline State Visualization</h2>
-                <div id="pipelineDisplay"></div>
+                <div id="pipelineDisplay">
+                    <div class="status-box status-info">Initialize simulator to view pipeline state...</div>
+                </div>
             </div>
 
             <!-- Registers Display -->
             <div class="panel">
                 <h2>Register File (x0 - x31)</h2>
-                <div id="registersDisplay" class="register-grid"></div>
+                <div id="registersDisplay" class="register-grid">
+                    <div class="status-box status-info">Initialize simulator to view registers...</div>
+                </div>
             </div>
 
             <!-- Assembly Listing -->
@@ -337,97 +403,204 @@ sw x3, 8(x0)"></textarea>
     </div>
 
     <script>
-        // Global Module variable
+        // Global state
+        let isModuleReady = false;
+        let isSimulatorInitialized = false;
+        let currentCycle = 0;
+        let isRunning = false;
+        let instructionMap = {}; // PC -> Assembly Line Text (for details)
+        let instructionLabels = {}; // PC -> Label (e.g., 'I1', 'I2')
+        let programPCs = []; // Ordered list of all instruction PCs
+        let assemblyCodeCache = ''; // Cache the code used for initialization
+        
+        // --- WebAssembly Module Setup ---
         var Module = {
             onRuntimeInitialized: function() {
                 console.log('RISC-V Simulator WebAssembly module loaded!');
-                console.log('Available functions:', Object.keys(Module).filter(k => typeof Module[k] === 'function'));
-                updateStatus('WebAssembly module loaded successfully! Ready to initialize.', 'success');
-            }
+                isModuleReady = true;
+                updateStatus('✓ WebAssembly module loaded! Ready to initialize simulator.', 'success');
+                enableButtons();
+            },
+            onAbort: function(what) {
+                console.error('WebAssembly module aborted:', what);
+                updateStatus('ERROR: WebAssembly module failed to load: ' + what, 'error');
+            },
+            getPipelineState: function() {
+                return {
+                    if_id_pc: 0,
+                    if_id_ir: 0,
+                    id_ex_ir: 0,
+                    ex_mem_ir: 0,
+                    mem_wb_ir: 0,
+                    id_ex_a: 0,
+                    id_ex_b: 0,
+                    id_ex_imm: 0,
+                    ex_mem_aluoutput: 0,
+                    mem_wb_aluoutput: 0,
+                    mem_wb_lmd: 0,
+                    mem_wb_rd: 0,
+                    mem_wb_regwrite: 0,
+                };
+            },
+            getPC: () => 0,
+            getRegister: () => 0,
+            getAssemblyListing: () => assemblyCodeCache,
+            isHalted: () => false, // Assume not halted initially
         };
+        // --- End WebAssembly Module Setup ---
+
+        function enableButtons() {
+            document.getElementById('initBtn').disabled = false;
+            document.getElementById('resetBtn').disabled = false;
+            document.getElementById('setMemBtn').disabled = false;
+            document.getElementById('getMemBtn').disabled = false;
+            document.getElementById('setRegBtn').disabled = false;
+        }
+
+        function enableSimButtons() {
+            document.getElementById('stepBtn').disabled = false;
+            document.getElementById('runBtn').disabled = false;
+        }
+
+        function disableSimButtons() {
+            document.getElementById('stepBtn').disabled = true;
+            document.getElementById('runBtn').disabled = true;
+        }
 
         function updateStatus(message, type = 'info') {
             const statusBox = document.getElementById('statusBox');
-            statusBox.textContent = message;
+            // Remove spinner if not loading
+            const htmlMessage = message.includes('Loading') ? `<span class="loading-spinner"></span>${message}` : message;
+            statusBox.innerHTML = htmlMessage; 
             statusBox.className = 'status-box status-' + type;
         }
 
+        function checkModuleReady() {
+            if (!isModuleReady) {
+                updateStatus('ERROR: WebAssembly module not loaded yet. Please wait for initialization...', 'error');
+                return false;
+            }
+            return true;
+        }
+
         function initSim() {
+            if (!checkModuleReady()) return;
+
             const code = document.getElementById('assemblyCode').value;
+            assemblyCodeCache = code; // Cache for display functions
+
             if (!code.trim()) {
                 updateStatus('ERROR: Please enter assembly code', 'error');
                 return;
             }
 
             if (!Module.initializeSimulator) {
-                updateStatus('ERROR: WebAssembly module not loaded yet. Please wait...', 'error');
-                console.error('Module.initializeSimulator is not available');
+                updateStatus('ERROR: initializeSimulator function not found in module', 'error');
                 return;
             }
 
             try {
+                // Reset state and cycle count
+                currentCycle = 0;
+                isRunning = false;
+
                 const result = Module.initializeSimulator(code);
                 if (result.startsWith('SUCCESS')) {
                     updateStatus(result, 'success');
+                    isSimulatorInitialized = true;
+                    enableSimButtons();
+                    updateAssemblyListing(); // Must run after successful init
                     updateAllDisplays();
                 } else {
                     updateStatus(result, 'error');
+                    isSimulatorInitialized = false;
+                    disableSimButtons();
                 }
             } catch (e) {
                 updateStatus('ERROR: ' + e.message, 'error');
                 console.error('Init error:', e);
+                isSimulatorInitialized = false;
+                disableSimButtons();
             }
         }
 
         function stepSim() {
+            if (!checkModuleReady() || !isSimulatorInitialized) {
+                updateStatus('ERROR: Simulator not initialized. Please initialize first.', 'error');
+                return;
+            }
+            
+            if (Module.isHalted()) {
+                updateStatus(`Simulation has halted. Total cycles: ${currentCycle}`, 'warning');
+                disableSimButtons();
+                return;
+            }
+
             if (!Module.stepSimulator) {
-                updateStatus('ERROR: Simulator not loaded', 'error');
+                updateStatus('ERROR: stepSimulator function not found', 'error');
                 return;
             }
             
             try {
                 const result = Module.stepSimulator();
                 if (result.startsWith('SUCCESS')) {
-                    updateStatus(result, 'success');
+                    currentCycle++; 
+                    updateStatus(result + ` (Cycle ${currentCycle})`, 'success');
                     updateAllDisplays();
                 } else {
                     updateStatus(result, 'error');
                 }
             } catch (e) {
                 updateStatus('ERROR: ' + e.message, 'error');
-            }
-        }
-
-        function runSim() {
-            if (!Module.runSimulator) {
-                updateStatus('ERROR: Simulator not loaded', 'error');
-                return;
-            }
-            
-            try {
-                const result = Module.runSimulator();
-                if (result.startsWith('SUCCESS')) {
-                    updateStatus(result, 'success');
-                    updateAllDisplays();
-                } else {
-                    updateStatus(result, 'error');
-                }
-            } catch (e) {
-                updateStatus('ERROR: ' + e.message, 'error');
+                console.error('Step error:', e);
             }
         }
 
         function resetSim() {
+            if (!checkModuleReady()) return;
+            
             if (!Module.resetSimulator) {
-                updateStatus('ERROR: Simulator not loaded', 'error');
+                updateStatus('ERROR: resetSimulator function not found', 'error');
                 return;
             }
             
             try {
                 const result = Module.resetSimulator();
                 if (result.startsWith('SUCCESS')) {
+                    // Reset client-side state
+                    currentCycle = 0;
+                    isSimulatorInitialized = false;
+                    isRunning = false;
+                    instructionMap = {};
+                    instructionLabels = {};
+                    programPCs = [];
+
                     updateStatus(result, 'success');
+                    disableSimButtons();
                     updateAllDisplays();
+                    // Clear pipeline map specifically
+                    document.getElementById('pipelineDisplay').innerHTML = '<div class="status-box status-info">Initialize simulator to view pipeline state...</div>';
+                } else {
+                    updateStatus(result, 'error');
+                }
+            } catch (e) {
+                updateStatus('ERROR: ' + e.message, 'error');
+                console.error('Reset error:', e);
+            }
+        }
+
+        function setReg() {
+            if (!checkModuleReady()) return;
+            // ... (existing setReg logic) ...
+            if (!Module.setRegister) { updateStatus('ERROR: setRegister function not found', 'error'); return; }
+            const idx = parseInt(document.getElementById('regIndex').value);
+            const val = parseInt(document.getElementById('regValue').value);
+            if (isNaN(idx) || isNaN(val)) { updateStatus('ERROR: Invalid register index or value', 'error'); return; }
+            try {
+                const result = Module.setRegister(idx, val);
+                if (result.startsWith('SUCCESS')) {
+                    updateStatus(result, 'success');
+                    updateRegisters();
                 } else {
                     updateStatus(result, 'error');
                 }
@@ -436,120 +609,374 @@ sw x3, 8(x0)"></textarea>
             }
         }
 
-        function setReg() {
-            const idx = parseInt(document.getElementById('regIndex').value);
-            const val = parseInt(document.getElementById('regValue').value);
-            
-            if (isNaN(idx) || isNaN(val)) {
-                updateStatus('ERROR: Invalid register index or value', 'error');
-                return;
-            }
-
-            const result = Module.setRegister(idx, val);
-            if (result.startsWith('SUCCESS')) {
-                updateStatus(result, 'success');
-                updateRegisters();
-            } else {
-                updateStatus(result, 'error');
-            }
-        }
-
         function setMem() {
+            if (!checkModuleReady()) return;
+            // ... (existing setMem logic) ...
+            if (!Module.setMemoryWord) { updateStatus('ERROR: setMemoryWord function not found', 'error'); return; }
             const addr = parseInt(document.getElementById('memAddr').value);
             const val = parseInt(document.getElementById('memValue').value);
-            
-            if (isNaN(addr) || isNaN(val)) {
-                updateStatus('ERROR: Invalid memory address or value', 'error');
-                return;
-            }
-
-            const result = Module.setMemoryWord(addr, val);
-            if (result.startsWith('SUCCESS')) {
-                updateStatus(result, 'success');
-            } else {
-                updateStatus(result, 'error');
+            if (isNaN(addr) || isNaN(val)) { updateStatus('ERROR: Invalid memory address or value', 'error'); return; }
+            try {
+                const result = Module.setMemoryWord(addr, val);
+                if (result.startsWith('SUCCESS')) {
+                    updateStatus(result, 'success');
+                } else {
+                    updateStatus(result, 'error');
+                }
+            } catch (e) {
+                updateStatus('ERROR: ' + e.message, 'error');
             }
         }
 
         function getMem() {
+            if (!checkModuleReady()) return;
+            // ... (existing getMem logic) ...
+            if (!Module.getMemoryByte || !Module.getMemoryWord) { updateStatus('ERROR: Memory read functions not found', 'error'); return; }
             const addr = parseInt(document.getElementById('memAddr').value);
-            
-            if (isNaN(addr)) {
-                updateStatus('ERROR: Invalid memory address', 'error');
-                return;
+            if (isNaN(addr)) { updateStatus('ERROR: Invalid memory address', 'error'); return; }
+            try {
+                const byte = Module.getMemoryByte(addr);
+                const word = Module.getMemoryWord(addr);
+                
+                const memView = document.getElementById('memoryView');
+                memView.style.display = 'block';
+                memView.innerHTML = `Address 0x${addr.toString(16).toUpperCase().padStart(8, '0')}:<br>` +
+                                    `Byte: ${byte} (0x${byte.toString(16).toUpperCase().padStart(2, '0')})<br>` +
+                                    `Word (32-bit): ${word} (0x${(word >>> 0).toString(16).toUpperCase().padStart(8, '0')})`;
+            } catch (e) {
+                updateStatus('ERROR: ' + e.message, 'error');
             }
-
-            const byte = Module.getMemoryByte(addr);
-            const word = Module.getMemoryWord(addr);
-            
-            const memView = document.getElementById('memoryView');
-            memView.style.display = 'block';
-            memView.innerHTML = `Address ${addr}:<br>` +
-                              `Byte: ${byte} (0x${byte.toString(16).toUpperCase()})<br>` +
-                              `Word (32-bit): ${word} (0x${(word >>> 0).toString(16).toUpperCase().padStart(8, '0')})`;
         }
 
         function updatePC() {
-            const pc = Module.getPC();
-            document.getElementById('pcValue').textContent = '0x' + pc.toString(16).toUpperCase().padStart(8, '0');
+            if (!Module.getPC) return;
+            try {
+                const pc = Module.getPC();
+                document.getElementById('pcValue').textContent = '0x' + (pc >>> 0).toString(16).toUpperCase().padStart(8, '0');
+            } catch (e) {
+                console.error('Error updating PC:', e);
+            }
         }
 
         function updateRegisters() {
+            if (!Module.getRegister) return;
+            
             const container = document.getElementById('registersDisplay');
             let html = '';
             
-            for (let i = 0; i < 32; i++) {
-                const value = Module.getRegister(i);
-                const hexValue = (value >>> 0).toString(16).toUpperCase().padStart(8, '0');
-                html += `<div class="register-item"><strong>x${i}:</strong> ${value}<br><small>0x${hexValue}</small></div>`;
+            try {
+                for (let i = 0; i < 32; i++) {
+                    const value = Module.getRegister(i);
+                    const hexValue = (value >>> 0).toString(16).toUpperCase().padStart(8, '0');
+                    html += `<div class="register-item"><strong>x${i}:</strong> ${value}<br><small>0x${hexValue}</small></div>`;
+                }
+                container.innerHTML = html;
+            } catch (e) {
+                console.error('Error updating registers:', e);
+                container.innerHTML = '<div class="status-box status-error">Error reading registers</div>';
             }
-            
-            container.innerHTML = html;
         }
 
         function updatePipeline() {
-            const state = Module.getPipelineState();
+            if (!Module.getPipelineState || isRunning) return; // Prevent live update while running full sim
+
             const container = document.getElementById('pipelineDisplay');
-            
-            container.innerHTML = `
-                <div class="pipeline-stage">
-                    <h3>IF/ID (Instruction Fetch / Decode)</h3>
-                    <p>PC: 0x${state.if_id_pc.toString(16).toUpperCase().padStart(8, '0')}</p>
-                    <p>IR: 0x${state.if_id_ir.toString(16).toUpperCase().padStart(8, '0')}</p>
-                    <p>NPC: 0x${state.if_id_npc.toString(16).toUpperCase().padStart(8, '0')}</p>
-                </div>
-                <div class="pipeline-stage">
-                    <h3>ID/EX (Decode / Execute)</h3>
-                    <p>IR: 0x${state.id_ex_ir.toString(16).toUpperCase().padStart(8, '0')}</p>
-                    <p>A (rs1): ${state.id_ex_a} | B (rs2): ${state.id_ex_b}</p>
-                    <p>IMM: ${state.id_ex_imm} | NPC: 0x${state.id_ex_npc.toString(16).toUpperCase().padStart(8, '0')}</p>
-                </div>
-                <div class="pipeline-stage">
-                    <h3>EX/MEM (Execute / Memory)</h3>
-                    <p>IR: 0x${state.ex_mem_ir.toString(16).toUpperCase().padStart(8, '0')}</p>
-                    <p>ALU Output: ${state.ex_mem_aluoutput}</p>
-                    <p>B: ${state.ex_mem_b} | Condition: ${state.ex_mem_cond}</p>
-                </div>
-                <div class="pipeline-stage">
-                    <h3>MEM/WB (Memory / Write Back)</h3>
-                    <p>IR: 0x${state.mem_wb_ir.toString(16).toUpperCase().padStart(8, '0')}</p>
-                    <p>ALU Output: ${state.mem_wb_aluoutput} | LMD: ${state.mem_wb_lmd}</p>
-                    <p>RD: x${state.mem_wb_rd} | RegWrite: ${state.mem_wb_regwrite}</p>
-                </div>
-            `;
+
+            try {
+                const state = Module.getPipelineState();
+                
+                container.innerHTML = `
+                    <div style="display: flex; gap: 10px; justify-content: space-between;">
+                        <div class="pipeline-stage">
+                            <h3>IF (Fetch)</h3>
+                            <p>Next PC: 0x${(Module.getPC() >>> 0).toString(16).toUpperCase().padStart(8,'0')}</p>
+                            <p>IR (IF/ID): 0x${(state.if_id_ir >>> 0).toString(16).toUpperCase().padStart(8,'0')}</p>
+                        </div>
+
+                        <div class="pipeline-stage">
+                            <h3>ID (Decode)</h3>
+                            <p>IR (ID/EX): 0x${(state.id_ex_ir >>> 0).toString(16).toUpperCase().padStart(8,'0')}</p>
+                            <p>A: ${state.id_ex_a} | B: ${state.id_ex_b}</p>
+                        </div>
+
+                        <div class="pipeline-stage">
+                            <h3>EX (Execute)</h3>
+                            <p>IR (EX/MEM): 0x${(state.ex_mem_ir >>> 0).toString(16).toUpperCase().padStart(8,'0')}</p>
+                            <p>ALU Out: ${state.ex_mem_aluoutput}</p>
+                        </div>
+
+                        <div class="pipeline-stage">
+                            <h3>MEM (Memory)</h3>
+                            <p>IR (MEM/WB): 0x${(state.mem_wb_ir >>> 0).toString(16).toUpperCase().padStart(8,'0')}</p>
+                            <p>LMD: ${state.mem_wb_lmd}</p>
+                        </div>
+
+                        <div class="pipeline-stage">
+                            <h3>WB (Write Back)</h3>
+                            <p>RD: x${state.mem_wb_rd}</p>
+                            <p>Value: ${state.mem_wb_aluoutput || state.mem_wb_lmd}</p>
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                console.error('Error updating pipeline:', e);
+                container.innerHTML = '<div class="status-box status-error">Error reading pipeline state</div>';
+            }
         }
 
+
         function updateAssemblyListing() {
-            const listing = Module.getAssemblyListing();
-            document.getElementById('assemblyListing').textContent = listing || 'No code loaded yet...';
+            if (!Module.getAssemblyListing) return;
+            
+            const container = document.getElementById('assemblyListing');
+            instructionMap = {};
+            instructionLabels = {};
+            programPCs = [];
+            
+            try {
+                const listing = Module.getAssemblyListing();
+                container.textContent = listing || 'No code loaded yet...';
+                
+                const lines = listing.trim().split('\n');
+                let instrCount = 0;
+                
+                // Parse assembly listing to map PC to Instruction Label (I1, I2, etc.)
+                lines.forEach(line => {
+                    const match = line.match(/^(0x[0-9a-fA-F]+):\s*(.*)$/);
+                    if (match) {
+                        const pcHex = match[1];
+                        const pc = parseInt(pcHex, 16);
+                        const instructionText = match[2].trim();
+                        
+                        // Only map instructions that take up space
+                        if (!instructionText.startsWith('.') && instructionText.length > 0 && !instructionText.includes(':')) {
+                            instrCount++;
+                            const label = `I${instrCount}`;
+                            instructionMap[pc] = instructionText;
+                            instructionLabels[pc] = label;
+                            programPCs.push(pc);
+                        }
+                    }
+                });
+
+            } catch (e) {
+                console.error('Error updating assembly listing:', e);
+                container.innerHTML = '<div class="status-box status-error">Error reading assembly listing</div>';
+            }
         }
+
+        function runAllWithPipeline() {
+            if (!checkModuleReady() || !isSimulatorInitialized) return;
+
+            const cycles = [];
+
+            function stepCycle() {
+                if (Module.isHalted()) { // stop when simulator signals halt
+                    displayPipelineMap(cycles);
+                    displayPipelineByInstruction(cycles); // new instruction-centric Gantt chart
+                    updateStatus('Simulation completed!', 'success');
+                    return;
+                }
+
+                // Step simulator
+                const stepResult = Module.stepSimulator();
+                if (!stepResult.startsWith('SUCCESS')) {
+                    updateStatus(stepResult, 'error');
+                    return;
+                }
+
+                // Get current pipeline state
+                const state = Module.getPipelineState();
+                cycles.push(JSON.parse(JSON.stringify(state))); // save snapshot
+
+                updatePC();
+                updateRegisters();
+                updatePipeline();
+
+                // Check if pipeline is empty (all stages null/0)
+                const isPipelineEmpty = !state.if_id_ir && !state.id_ex_ir && !state.ex_mem_ir && !state.mem_wb_ir;
+                if (isPipelineEmpty && cycles.length > 0) {
+                    displayPipelineMap(cycles);
+                    displayPipelineByInstruction
+                    updateStatus('Simulation completed!', 'success');
+                    return;
+                }
+
+                setTimeout(stepCycle, 20); // 20ms per cycle for animation
+            }
+
+            stepCycle();
+        }
+
+        function displayPipelineMap(cycles) {
+            const container = document.getElementById('pipelineDisplay');
+            container.innerHTML = ''; 
+
+            if (!cycles.length) {
+                container.innerHTML = '<div class="status-box status-info">No pipeline activity</div>';
+                return;
+            }
+
+            const stages = ['IF', 'ID', 'EX', 'MEM', 'WB'];
+            const numColumns = cycles.length + 1
+
+            const grid = document.createElement('div');
+            grid.className = 'pipeline-map';
+            grid.style.display = 'grid';
+            grid.style.gridTemplateRows = `repeat(${stages.length + 1}, auto)`; // +1 for header
+            grid.style.gridTemplateColumns = `repeat(${numColumns}, 120px)`; 
+            grid.style.gap = '2px';
+
+            // Top-left empty header
+            const emptyHeader = document.createElement('div');
+            emptyHeader.className = 'stage-cell header-cell';
+            emptyHeader.textContent = '';
+            emptyHeader.style.gridRow = 1;
+            emptyHeader.style.gridColumn = 1;
+            grid.appendChild(emptyHeader);
+
+            // Cycle headers
+            for (let c = 0; c < cycles.length; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'stage-cell header-cell';
+                cell.textContent = `C${c + 1}`;
+                cell.style.gridRow = 1;
+                cell.style.gridColumn = c + 2;
+                grid.appendChild(cell);
+            }
+
+            // Rows for stages and subfields
+            stages.forEach((stage, stageIdx) => {
+                // Stage label
+                const labelCell = document.createElement('div');
+                labelCell.className = 'stage-cell header-cell';
+                labelCell.textContent = stage;
+                labelCell.style.gridRow = stageIdx + 2;
+                labelCell.style.gridColumn = 1;
+                grid.appendChild(labelCell);
+
+                // Cells for each cycle
+                cycles.forEach((state, cycleIdx) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'stage-cell';
+                    cell.style.gridRow = stageIdx + 2;
+                    cell.style.gridColumn = cycleIdx + 2;
+
+                    let content = '';
+                    switch (stage) {
+                        case 'IF':
+                            content = `PC: 0x${(Module.getPC() >>> 0).toString(16).padStart(8,'0')}\nIR: ${state.if_id_ir ? '0x'+state.if_id_ir.toString(16).padStart(8,'0') : ''}`;
+                            //<p>Next PC: 0x${(Module.getPC() >>> 0).toString(16).toUpperCase().padStart(8,'0')}</p>
+                            break;
+                        case 'ID':
+                            content = `IR: ${state.id_ex_ir ? '0x'+state.id_ex_ir.toString(16).padStart(8,'0') : ''}\nA: ${state.id_ex_a}\nB: ${state.id_ex_b}`;
+                            break;
+                        case 'EX':
+                            content = `IR: ${state.ex_mem_ir ? '0x'+state.ex_mem_ir.toString(16).padStart(8,'0') : ''}\nALUOut: ${state.ex_mem_aluoutput}`;
+                            break;
+                        case 'MEM':
+                            content = `IR: ${state.mem_wb_ir ? '0x'+state.mem_wb_ir.toString(16).padStart(8,'0') : ''}\nLMD: ${state.mem_wb_lmd}`;
+                            break;
+                        case 'WB':
+                            const val = state.mem_wb_aluoutput || state.mem_wb_lmd;
+                            content = `RD: x${state.mem_wb_rd}\nValue: ${val}`;
+                            break;
+                    }
+
+                    cell.innerHTML = content.replace(/\n/g, '<br>');
+                    grid.appendChild(cell);
+                });
+            });
+
+            container.appendChild(grid);
+        }
+
+
+        function displayPipelineByInstruction(cycles) {
+    const container = document.getElementById('pipelineByInstrDisplay');
+    container.innerHTML = ''; // clear previous
+
+    if (!cycles.length || !programPCs.length) {
+        container.innerHTML = '<div class="status-box status-info">No pipeline activity</div>';
+        return;
+    }
+
+    const stages = ['IF','ID','EX','MEM','WB'];
+    const numColumns = cycles.length + 1; // +1 for instruction labels
+
+    const grid = document.createElement('div');
+    grid.className = 'pipeline-map';
+    grid.style.display = 'grid';
+    grid.style.gridTemplateRows = `repeat(${programPCs.length + 1}, auto)`; // +1 for header
+    grid.style.gridTemplateColumns = `repeat(${numColumns}, 100px)`; // width per cycle
+    grid.style.gap = '2px';
+
+    // Top-left empty cell
+    const emptyHeader = document.createElement('div');
+    emptyHeader.className = 'stage-cell header-cell';
+    emptyHeader.textContent = '';
+    emptyHeader.style.gridRow = 1;
+    emptyHeader.style.gridColumn = 1;
+    grid.appendChild(emptyHeader);
+
+    // Cycle headers
+    for (let c = 0; c < cycles.length; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'stage-cell header-cell';
+        cell.textContent = `C${c + 1}`;
+        cell.style.gridRow = 1;
+        cell.style.gridColumn = c + 2;
+        grid.appendChild(cell);
+    }
+
+    // Instruction rows
+    programPCs.forEach((pc, instrIdx) => {
+        const labelCell = document.createElement('div');
+        labelCell.className = 'stage-cell header-cell';
+        const label = instructionLabels[pc] || `0x${pc.toString(16)}`;
+        labelCell.textContent = label;
+        labelCell.style.gridRow = instrIdx + 2;
+        labelCell.style.gridColumn = 1;
+        grid.appendChild(labelCell);
+
+        // Fill cells per cycle
+        cycles.forEach((state, cycleIdx) => {
+            const cell = document.createElement('div');
+            cell.className = 'stage-cell';
+            cell.style.gridRow = instrIdx + 2;
+            cell.style.gridColumn = cycleIdx + 2;
+
+            let stageName = '';
+            if (state.if_id_ir === pc) stageName = 'IF';
+            else if (state.id_ex_ir === pc) stageName = 'ID';
+            else if (state.ex_mem_ir === pc) stageName = 'EX';
+            else if (state.mem_wb_ir === pc) stageName = 'MEM';
+            else if (state.mem_wb_rd === pc) stageName = 'WB';
+
+            cell.textContent = stageName;
+            if (!stageName) cell.style.background = '#f0f0f0'; // empty cycle
+        });
+    });
+
+    container.appendChild(grid);
+}
+
+
 
         function updateAllDisplays() {
             updatePC();
             updateRegisters();
-            updatePipeline();
+            if (!isRunning) {
+                updatePipeline();
+            }
             updateAssemblyListing();
         }
+
+        setTimeout(function() {
+            if (!isModuleReady) {
+                updateStatus('ERROR: WebAssembly module failed to load. Please check console and ensure simulator.js is available.', 'error');
+            }
+        }, 10000);
     </script>
 
     <!-- Load the compiled WebAssembly module -->
