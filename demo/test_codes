@@ -1,0 +1,48 @@
+# No Hazards - Ideal Pipeline
+.data
+n1: .word 100
+n2: .word 200
+n3: .word 300
+
+.text
+lw x1, 0(x0)      # Load 100
+lw x2, 4(x0)      # Load 200  (no hazard - different regs)
+lw x3, 8(x0)      # Load 300  (no hazard - different regs)
+sw x1, 12(x0)     # Store 100 (no hazard - only reads x1 after enough cycles)
+sw x2, 16(x0)     # Store 200 (no hazard)
+sw x3, 20(x0)     # Store 300 (no hazard)
+
+# Data Hazard Test - NO FORWARDING
+.data
+val1: .word 10
+val2: .word 20
+
+.text
+lw x1, 0(x0)      # Load 10 into x1
+lw x2, 4(x0)      # Load 20 into x2
+slt x3, x1, x2    # DATA HAZARD: needs x1, x2 (must stall 2 cycles after lw)
+sll x4, x3, x2    # DATA HAZARD: needs x3 (must stall)
+sw x4, 8(x0)      # Store result
+
+# Combined Hazards Test
+.data
+a: .word 15
+b: .word 10
+
+.text
+lw x1, 0(x0)       # Load 15
+lw x2, 4(x0)       # Load 10
+slt x3, x1, x2     # DATA HAZARD: needs x1, x2 (stall)
+beq x3, x0, skip   # CONTROL HAZARD: depends on x3 (stall), then branch
+sll x4, x1, x2     # Should be flushed if branch taken
+skip:
+sw x1, 8(x0)       # Store result
+
+# Load-Use Hazard (Most Critical)
+.data
+value: .word 42
+
+.text
+lw x1, 0(x0)      # Load 42 into x1 (takes multiple cycles)
+slt x2, x1, x0    # IMMEDIATE USE - Must stall! x1 not ready
+sw x2, 4(x0)      # Store result
