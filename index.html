@@ -771,7 +771,7 @@ sw x3, 8(x0)"></textarea>
             const cycles = [];
 
             function stepCycle() {
-                if (Module.isHalted()) { // stop when simulator signals halt
+                if (Module.isHalted()) {
                     displayPipelineMap(cycles);
                     displayPipelineByInstruction(cycles); // new instruction-centric Gantt chart
                     updateStatus('Simulation completed!', 'success');
@@ -787,6 +787,9 @@ sw x3, 8(x0)"></textarea>
 
                 // Get current pipeline state
                 const state = Module.getPipelineState();
+
+                state.pc = Module.getPC() >>> 0;
+
                 cycles.push(JSON.parse(JSON.stringify(state))); // save snapshot
 
                 updatePC();
@@ -810,7 +813,7 @@ sw x3, 8(x0)"></textarea>
 
         function displayPipelineMap(cycles) {
             const container = document.getElementById('pipelineDisplay');
-            container.innerHTML = ''; 
+            container.innerHTML = ''; // clear previous
 
             if (!cycles.length) {
                 container.innerHTML = '<div class="status-box status-info">No pipeline activity</div>';
@@ -818,13 +821,13 @@ sw x3, 8(x0)"></textarea>
             }
 
             const stages = ['IF', 'ID', 'EX', 'MEM', 'WB'];
-            const numColumns = cycles.length + 1
+            const numColumns = cycles.length + 1; // +1 for stage labels
 
             const grid = document.createElement('div');
             grid.className = 'pipeline-map';
             grid.style.display = 'grid';
             grid.style.gridTemplateRows = `repeat(${stages.length + 1}, auto)`; // +1 for header
-            grid.style.gridTemplateColumns = `repeat(${numColumns}, 120px)`; 
+            grid.style.gridTemplateColumns = `repeat(${numColumns}, 120px)`; // width per cycle
             grid.style.gap = '2px';
 
             // Top-left empty header
@@ -865,7 +868,8 @@ sw x3, 8(x0)"></textarea>
                     let content = '';
                     switch (stage) {
                         case 'IF':
-                            content = `PC: 0x${(Module.getPC() >>> 0).toString(16).padStart(8,'0')}\nIR: ${state.if_id_ir ? '0x'+state.if_id_ir.toString(16).padStart(8,'0') : ''}`;
+                            content = `NPC: 0x${state.pc.toString(16).padStart(8,'0')}\nIR: ${state.if_id_ir ? '0x'+state.if_id_ir.toString(16).padStart(8,'0') : ''}`;
+                            //content = `PC: 0x${(Module.getPC() >>> 0).toString(16).padStart(8,'0')}\nIR: ${state.if_id_ir ? '0x'+state.if_id_ir.toString(16).padStart(8,'0') : ''}`;
                             //<p>Next PC: 0x${(Module.getPC() >>> 0).toString(16).toUpperCase().padStart(8,'0')}</p>
                             break;
                         case 'ID':
@@ -883,7 +887,7 @@ sw x3, 8(x0)"></textarea>
                             break;
                     }
 
-                    cell.innerHTML = content.replace(/\n/g, '<br>');
+                    cell.innerHTML = content.replace(/\n/g, '<br>'); // convert newlines to HTML
                     grid.appendChild(cell);
                 });
             });
@@ -893,85 +897,85 @@ sw x3, 8(x0)"></textarea>
 
 
         function displayPipelineByInstruction(cycles) {
-    const container = document.getElementById('pipelineByInstrDisplay');
-    container.innerHTML = ''; // clear previous
+            const container = document.getElementById('pipelineByInstrDisplay');
+            container.innerHTML = ''; // clear previous
 
-    if (!cycles.length || !programPCs.length) {
-        container.innerHTML = '<div class="status-box status-info">No pipeline activity</div>';
-        return;
-    }
+            if (!cycles.length || !programPCs.length) {
+                container.innerHTML = '<div class="status-box status-info">No pipeline activity</div>';
+                return;
+            }
 
-    const stages = ['IF','ID','EX','MEM','WB'];
-    const numColumns = cycles.length + 1; // +1 for instruction labels
+            const stages = ['IF','ID','EX','MEM','WB'];
+            const numColumns = cycles.length + 1; // +1 for instruction labels
 
-    const grid = document.createElement('div');
-    grid.className = 'pipeline-map';
-    grid.style.display = 'grid';
-    grid.style.gridTemplateRows = `repeat(${programPCs.length + 1}, auto)`; // +1 for header
-    grid.style.gridTemplateColumns = `repeat(${numColumns}, 100px)`; // width per cycle
-    grid.style.gap = '2px';
+            const grid = document.createElement('div');
+            grid.className = 'pipeline-map';
+            grid.style.display = 'grid';
+            grid.style.gridTemplateRows = `repeat(${programPCs.length + 1}, auto)`; // +1 for header
+            grid.style.gridTemplateColumns = `repeat(${numColumns}, 100px)`; // width per cycle
+            grid.style.gap = '2px';
 
-    // Top-left empty cell
-    const emptyHeader = document.createElement('div');
-    emptyHeader.className = 'stage-cell header-cell';
-    emptyHeader.textContent = '';
-    emptyHeader.style.gridRow = 1;
-    emptyHeader.style.gridColumn = 1;
-    grid.appendChild(emptyHeader);
+            // Top-left empty cell
+            const emptyHeader = document.createElement('div');
+            emptyHeader.className = 'stage-cell header-cell';
+            emptyHeader.textContent = '';
+            emptyHeader.style.gridRow = 1;
+            emptyHeader.style.gridColumn = 1;
+            grid.appendChild(emptyHeader);
 
-    // Cycle headers
-    for (let c = 0; c < cycles.length; c++) {
-        const cell = document.createElement('div');
-        cell.className = 'stage-cell header-cell';
-        cell.textContent = `C${c + 1}`;
-        cell.style.gridRow = 1;
-        cell.style.gridColumn = c + 2;
-        grid.appendChild(cell);
-    }
+            // Cycle headers
+            for (let c = 0; c < cycles.length; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'stage-cell header-cell';
+                cell.textContent = `C${c + 1}`;
+                cell.style.gridRow = 1;
+                cell.style.gridColumn = c + 2;
+                grid.appendChild(cell);
+            }
 
-    // Instruction rows
-    programPCs.forEach((pc, instrIdx) => {
-        const labelCell = document.createElement('div');
-        labelCell.className = 'stage-cell header-cell';
-        const label = instructionLabels[pc] || `0x${pc.toString(16)}`;
-        labelCell.textContent = label;
-        labelCell.style.gridRow = instrIdx + 2;
-        labelCell.style.gridColumn = 1;
-        grid.appendChild(labelCell);
+            // Instruction rows
+            programPCs.forEach((pc, instrIdx) => {
+                const labelCell = document.createElement('div');
+                labelCell.className = 'stage-cell header-cell';
+                const label = instructionLabels[pc] || `0x${pc.toString(16)}`;
+                labelCell.textContent = label;
+                labelCell.style.gridRow = instrIdx + 2;
+                labelCell.style.gridColumn = 1;
+                grid.appendChild(labelCell);
 
-        // Fill cells per cycle
-        cycles.forEach((state, cycleIdx) => {
-            const cell = document.createElement('div');
-            cell.className = 'stage-cell';
-            cell.style.gridRow = instrIdx + 2;
-            cell.style.gridColumn = cycleIdx + 2;
+                // Fill cells per cycle
+                cycles.forEach((state, cycleIdx) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'stage-cell';
+                    cell.style.gridRow = instrIdx + 2;
+                    cell.style.gridColumn = cycleIdx + 2;
 
-            let stageName = '';
-            if (state.if_id_ir === pc) stageName = 'IF';
-            else if (state.id_ex_ir === pc) stageName = 'ID';
-            else if (state.ex_mem_ir === pc) stageName = 'EX';
-            else if (state.mem_wb_ir === pc) stageName = 'MEM';
-            else if (state.mem_wb_rd === pc) stageName = 'WB';
+                    let stageName = '';
+                    if (state.if_id_ir === pc) stageName = 'IF';
+                    else if (state.id_ex_ir === pc) stageName = 'ID';
+                    else if (state.ex_mem_ir === pc) stageName = 'EX';
+                    else if (state.mem_wb_ir === pc) stageName = 'MEM';
+                    else if (state.mem_wb_rd === pc) stageName = 'WB';
 
-            cell.textContent = stageName;
-            if (!stageName) cell.style.background = '#f0f0f0'; // empty cycle
-        });
-    });
+                    cell.textContent = stageName;
+                    if (!stageName) cell.style.background = '#f0f0f0'; // empty cycle
+                });
+            });
 
-    container.appendChild(grid);
-}
-
-
+            container.appendChild(grid);
+        }
 
         function updateAllDisplays() {
             updatePC();
             updateRegisters();
+            // Only update the live pipeline status if we are not in the run loop
             if (!isRunning) {
                 updatePipeline();
             }
             updateAssemblyListing();
         }
 
+        // Check if module loads within 10 seconds
         setTimeout(function() {
             if (!isModuleReady) {
                 updateStatus('ERROR: WebAssembly module failed to load. Please check console and ensure simulator.js is available.', 'error');
