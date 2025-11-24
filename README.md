@@ -1,12 +1,12 @@
 # RISCV-processor
 A simulator for a simplified RISC-V processor in C++
 
-## Supported Instructions:
+## Supported Instructions
 LW, SW, SLT, SLL, SLLI, BEQ, BLT
 
 Additional Instructions: ADD, SUB, AND, ADDI
 
-## Design Methodology:
+## Design Methodology
 assembler.hpp - contains shared data structures, constants, and global declarations
 
 encoder.cpp - contains functions for translation to opcode
@@ -37,7 +37,7 @@ utils.cpp - for helper/utility functions (e.g., splitting, conversions, register
 
 utils.hpp - for helper/utility functions (e.g., splitting, conversions, register parsing)
 
-## Testing Methodology:
+## Testing Methodology
 The code was compiled using Emscripten as a way to generate the wasm file needed for the HTML webpage.
 
 Compiling Command: "emcc *.cpp -o ../simulator.js -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' -s EXPORT_ES6=0 --bind -std=c++17 -O2"
