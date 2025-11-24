@@ -16,12 +16,21 @@ a simulator for a simplified RISC-V processor in C++
 ## To run:
 cd cpp_files
 
-emcc *.cpp   -o ../simulator.js   -s WASM=1   -s ALLOW_MEMORY_GROWTH=1   -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]'   -s EXPORT_ES6=0   --bind   -std=c++17   -O2
+emcc *.cpp -o ../simulator.js \
+  -s WASM=1 \
+  -s ALLOW_MEMORY_GROWTH=1 \
+  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
+  -s EXPORT_ES6=0 \
+  --bind \
+  -std=c++17 \
+  -O2
 
 cd ..
 
-python3 -m http.server 8000 # OR python -m http.server 8000
-
+# Start a local server
+python3 -m http.server 8000
+# OR
+python -m http.server 8000
 
 
 ## Supported Instructions:
