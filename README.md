@@ -3,6 +3,7 @@
 - This program showcases the RISC-V process of running any abritrary RISC-V instruction (within the supported instruction set)
 ## Supported Instructions:
 LW, SW, SLT, SLL, SLLI, BEQ, BLT
+## Screenshot
 ![Screenshot](assets/app_image.png)
 ## To run:
 ```bash
