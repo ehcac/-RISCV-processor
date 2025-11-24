@@ -4,6 +4,14 @@ a simulator for a simplified RISC-V processor in C++
   - Implemented parsing of RISC-V source code
   - Implemented conversion of RISC-V code to equivalent opcodes (hex)
   - Printed output in console
+## Milestone#2
+  - Created outputs for memory (registers, mian memmory)
+  - Displayed pipeline map for each cycle
+  - Running code on html website using web assembly via console log
+## Milestone#3
+  - Added feature of text box for users to input code
+  - Created display for regiester values, opcodes, and pipeline map
+  - User is able to edit main memory, and register throughout runtime
 
 ## To run:
 cd cpp_files
